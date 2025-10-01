@@ -39,6 +39,6 @@ jobs:
         run: tflint --recursive
 
       - name: tfsec (security scan)
-        uses: aquasecurity/tfsec-action@v1.0.4
+        uses: aquasecurity/tfsec-action@v1.0.0
         with:
           additional_args: --concise-output --minimum-severity MEDIUM
