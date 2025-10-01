@@ -4,8 +4,8 @@ variable "role_name" {
 }
 
 variable "description" {
-  type        = string
-  default     = "Reusable Developer Role (least-priv baseline, extensible)"
+  type    = string
+  default = "Reusable Developer Role (least-priv baseline, extensible)"
 }
 
 variable "github_oidc_provider_arn" {
@@ -38,6 +38,6 @@ variable "permissions_boundary_arn" {
 }
 
 variable "tags" {
-  type        = map(string)
-  default     = {}
+  type    = map(string)
+  default = {}
 }

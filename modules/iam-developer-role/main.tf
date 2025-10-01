@@ -43,20 +43,20 @@ resource "aws_iam_role" "dev" {
 
 # Attach any number of managed policies (AWS or customer-managed)
 resource "aws_iam_role_policy_attachment" "managed" {
-  for_each = toset(var.managed_policy_arns)
-  role     = aws_iam_role.dev.name
+  for_each   = toset(var.managed_policy_arns)
+  role       = aws_iam_role.dev.name
   policy_arn = each.value
 }
 
 # Optional inline policies
 resource "aws_iam_policy" "inline_src" {
   for_each = var.inline_policies_json
-  name   = "${var.role_name}-${each.key}"
-  policy = each.value
+  name     = "${var.role_name}-${each.key}"
+  policy   = each.value
 }
 
 resource "aws_iam_role_policy_attachment" "inline_attach" {
-  for_each  = aws_iam_policy.inline_src
-  role      = aws_iam_role.dev.name
+  for_each   = aws_iam_policy.inline_src
+  role       = aws_iam_role.dev.name
   policy_arn = each.value.arn
 }
