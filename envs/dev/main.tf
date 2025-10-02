@@ -40,22 +40,42 @@ data "aws_iam_policy_document" "baseline_readonly" {
 module "iam_developer_role" {
   source = "../../modules/iam-developer-role"
 
-  role_name                = "dev-role"
-  description              = "Reusable Developer Role (least-priv baseline, extensible)"
-  github_oidc_provider_arn = var.github_oidc_provider_arn
-  github_repo_sub_patterns = var.github_repo_sub_patterns
+  role_name   = "dev-role"
+  description = "Reusable Developer Role (least-priv baseline, extensible)"
 
-  permissions_boundary_arn = aws_iam_policy.dev_boundary.arn
-
-  # Start with no broad permissions; add Iceberg/EKS/etc. later in other epics
-  managed_policy_arns = [] # e.g., ["arn:aws:iam::aws:policy/ReadOnlyAccess"]
-  inline_policies_json = {
-    "baseline" = data.aws_iam_policy_document.baseline_readonly.json
-  }
+  # ⚠️ For the test run, skip boundary or use a permissive test boundary
+  permissions_boundary_arn = null
 
   tags = {
-    Project = "OpenTofu"
     Env     = "dev"
     Owner   = "Platform"
+    Project = "OpenTofu"
   }
+
+  github_oidc_provider_arn = "arn:aws:iam::252371519482:oidc-provider/token.actions.githubusercontent.com"
+  github_repo_sub_patterns = ["repo:dummy-org/dummy-repo:*"]
+
+  # ✅ Allow your local user (or a role/group you use locally) to assume the role in tests
+  additional_trusted_principals = [
+    "arn:aws:iam::252371519482:user/melvin.laguren@fabrion.com"
+  ]
+
+  # If your module outputs role_arn, you can reference it below for the user policy
 }
+
+# If your module outputs role_arn, use it directly. Otherwise hardcode the ARN.
+# output "role_arn" from the module is recommended.
+
+resource "aws_iam_user_policy" "allow_assume_dev_role" {
+  user = "melvin.laguren@fabrion.com"
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Effect   = "Allow",
+      Action   = "sts:AssumeRole",
+      Resource = "arn:aws:iam::252371519482:role/dev-role" # or module.iam_developer_role.role_arn
+    }]
+  })
+}
+

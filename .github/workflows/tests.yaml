@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  id-token: write      # OIDC!
+  id-token: write
   contents: read
 
 env:
@@ -13,6 +13,8 @@ env:
 
 jobs:
   terratest-iam:
+    # Prevent running on forked PRs (no repo secrets there)
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
 
     steps:
@@ -24,6 +26,12 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_CI_ROLE_TO_ASSUME }}
           aws-region: ${{ env.AWS_REGION }}
+          role-session-name: gha-iam-terratest
+          role-duration-seconds: 3600
+
+      # Sanity check: fail fast if creds are not present
+      - name: Who am I? (STS)
+        run: aws sts get-caller-identity
 
       - name: Setup OpenTofu
         uses: opentofu/setup-opentofu@v1
@@ -49,30 +57,28 @@ jobs:
       - name: Install gotestsum
         run: go install gotest.tools/gotestsum@latest
 
-      # Terraform variable injection for module:
-      # Allow the CI role itself to AssumeRole into the just-created dev-role (test does sts:AssumeRole)
-      - name: Set TF_VARs for module
+      - name: Resolve AWS Account ID (for test env)
+        id: sts_id
         run: |
-          echo 'TF_VAR_additional_trusted_principals=["${{ secrets.AWS_CI_ROLE_TO_ASSUME }}"]' >> $GITHUB_ENV
-          # Optional: if your envs/dev expects a region var
-          echo "TF_VAR_aws_region=${{ env.AWS_REGION }}" >> $GITHUB_ENV
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          echo "AWS_ACCOUNT_ID=$ACCOUNT_ID" >> "$GITHUB_ENV"
+          echo "account=$ACCOUNT_ID" >> "$GITHUB_OUTPUT"
 
       - name: Run Terratest (IAM Developer Role)
         working-directory: tests
         env:
+          # required by your test file
           AWS_REGION: ${{ env.AWS_REGION }}
-          # Provide AWS account id for the test (used to build OIDC provider ARN)
           AWS_ACCOUNT_ID: ${{ steps.sts_id.outputs.account }}
-          # Ensure tofu is what Terratest uses
-          TERRATEST_LOG_PARSER: json
-        run: |
-          # Resolve account id for the test var
-          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-          echo "AWS_ACCOUNT_ID=$ACCOUNT_ID" >> $GITHUB_ENV
 
-          # run test and emit junit
+          # ensure Terratest/terraform subprocesses see the OIDC creds
+          AWS_ACCESS_KEY_ID: ${{ env.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          AWS_SESSION_TOKEN: ${{ env.AWS_SESSION_TOKEN }}
+        run: |
+          go mod download
           gotestsum --junitfile test-report.xml -- \
-            -run TestIamDeveloperRole -v -timeout 30m | tee output.txt
+            go test -run TestIamDeveloperRole -v -timeout 30m ./... | tee output.txt
 
       - name: Upload test report (JUnit)
         uses: actions/upload-artifact@v4

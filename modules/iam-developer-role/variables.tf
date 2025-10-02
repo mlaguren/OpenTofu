@@ -1,43 +1,55 @@
 variable "role_name" {
+  description = "IAM role name to create"
   type        = string
-  description = "Name of the developer role"
 }
 
 variable "description" {
-  type    = string
-  default = "Reusable Developer Role (least-priv baseline, extensible)"
-}
-
-variable "github_oidc_provider_arn" {
+  description = "Description for the IAM role"
   type        = string
-  description = "ARN of the GitHub OIDC provider in this AWS account, e.g. arn:aws:iam::<acct>:oidc-provider/token.actions.githubusercontent.com"
+  default     = "Reusable Developer Role (least-priv baseline, extensible)"
 }
 
-variable "github_repo_sub_patterns" {
-  type        = list(string)
-  description = "Allowed GitHub repo sub patterns, e.g. [\"repo:yourorg/yourrepo:*\", \"repo:yourorg/other:*\" ]"
-  default     = []
+variable "permissions_boundary_arn" {
+  description = "Optional IAM permissions boundary ARN. Use null to skip."
+  type        = string
+  default     = null
+}
+
+variable "tags" {
+  description = "Tags to apply to the IAM role"
+  type        = map(string)
+  default     = {}
 }
 
 variable "managed_policy_arns" {
+  description = "Managed policy ARNs (AWS or customer-managed) to attach to the role"
   type        = list(string)
-  description = "Optional AWS managed or customer managed policies to attach"
   default     = []
 }
 
 variable "inline_policies_json" {
+  description = "Map of name => JSON policy documents (already jsonencoded)"
   type        = map(string)
   default     = {}
-  description = "Map of { policy_name = json } for inline policies"
 }
 
-variable "permissions_boundary_arn" {
+variable "github_oidc_provider_arn" {
+  description = "ARN of the GitHub OIDC provider in this AWS account"
   type        = string
-  default     = null
-  description = "Optional permissions boundary ARN to enforce least-priv guardrails"
 }
 
-variable "tags" {
-  type    = map(string)
-  default = {}
+variable "github_repo_sub_patterns" {
+  description = <<EOT
+Allowed GitHub 'sub' patterns for OIDC, e.g.:
+- ["repo:mlaguren/OpenTofu:*"]
+- ["repo:org/repo:ref:refs/heads/main"]
+EOT
+  type    = list(string)
+  default = []
+}
+
+variable "additional_trusted_principals" {
+  description = "Optional AWS principals (user/role ARNs) allowed to AssumeRole for local testing"
+  type        = list(string)
+  default     = []
 }
