@@ -44,8 +44,8 @@ Allowed GitHub 'sub' patterns for OIDC, e.g.:
 - ["repo:mlaguren/OpenTofu:*"]
 - ["repo:org/repo:ref:refs/heads/main"]
 EOT
-  type    = list(string)
-  default = []
+  type        = list(string)
+  default     = []
 }
 
 variable "additional_trusted_principals" {
