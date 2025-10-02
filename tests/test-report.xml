@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuites tests="1" failures="0" errors="0" time="23.627697">
-	<testsuite tests="1" failures="0" time="23.628000" name="github.com/mlaguren/OpenTofu/tests" timestamp="2025-10-02T13:50:15-07:00">
-		<properties>
-			<property name="go.version" value="go1.25.1 darwin/arm64"></property>
-		</properties>
-		<testcase classname="github.com/mlaguren/OpenTofu/tests" name="TestIamDeveloperRole" time="23.370000"></testcase>
-	</testsuite>
-</testsuites>
