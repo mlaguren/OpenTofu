@@ -11,16 +11,6 @@ The goal is to establish a reusable, modular foundation for cloud infrastructure
 * Developer IAM roles with least-privilege access
 * GitHub OIDC integration for secure CI/CD pipelines
 
-## Data Lake (S3 + Iceberg)
-
-* S3 buckets provisioned for Iceberg tables
-* Glue catalog integration for Athena queries
-
-## EKS Cluster Foundation
-
-* Modular setup for Kubernetes workloads
-* Environment-specific overlays for dev, int, and prod
-
 # Getting Started
 ## Prerequisites
 
@@ -107,7 +97,7 @@ aws sts get-caller-identity   # or: aws sts get-caller-identity --profile dev
 ```
 
 ## Using .env file
-Create a .env.local-testing
+Create a .env.local-test
 ```bash
 # Auth – choose one style
 AWS_PROFILE=dev
