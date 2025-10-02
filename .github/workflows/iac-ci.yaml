@@ -1,0 +1,67 @@
+# .github/workflows/iac-ci.yml
+name: IaC CI (OpenTofu)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [ main ]
+    paths:
+      - '**/*.tf'
+      - '**/*.tfvars'
+      - '.tflint.hcl'
+      - 'modules/**'
+      - 'envs/**'
+  schedule:
+    - cron: '0 8 * * 1'   # Mondays 08:00 UTC – catch drift/rules updates
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-validate-security:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: opentofu/setup-opentofu@v1
+        with: { tofu_version: v1.7.3 }
+
+      - name: Check formatting
+        run: tofu fmt -check -recursive .
+
+      - name: Validate each env
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -d '' ENVS < <(find envs -maxdepth 2 -name main.tf -print0 | xargs -0 -n1 dirname | sort -u | tr '\n' '\0')
+          for d in "${ENVS[@]}"; do
+            echo "::group::validate $d"
+            (cd "$d" && tofu init -backend=false -upgrade && tofu validate)
+            echo "::endgroup::"
+          done
+
+      - name: Cache TFLint plugins
+        uses: actions/cache@v4
+        with:
+          path: ~/.tflint.d/plugins
+          key: tflint-${{ runner.os }}-${{ hashFiles('.tflint.hcl') }}
+
+      - name: Install TFLint
+        run: |
+          curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
+          tflint --init
+
+      - name: Run TFLint (recursive)
+        run: tflint --recursive
+
+      - name: tfsec (security scan)
+        if: always()    # still runs to comment on findings even if lint fails
+        uses: aquasecurity/tfsec-action@v1.0.0
+        with:
+          additional_args: --concise-output --minimum-severity MEDIUM

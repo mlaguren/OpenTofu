@@ -136,7 +136,7 @@ set -a; source .env.local-test; set +a
 ```
 
 ## Running tests
-
+go install gotest.tools/gotestsum@latest
 To run a single test:
 ```bash
 cd tests

@@ -1,0 +1,13 @@
+# Terraform / OpenTofu local files
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Ignore lockfile only if your team chooses not to commit it
+# .terraform.lock.hcl
+
