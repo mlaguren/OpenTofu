@@ -52,8 +52,8 @@ module "iam_developer_role" {
     Project = "OpenTofu"
   }
 
-  github_oidc_provider_arn = "arn:aws:iam::252371519482:oidc-provider/token.actions.githubusercontent.com"
-  github_repo_sub_patterns = ["repo:dummy-org/dummy-repo:*"]
+  github_oidc_provider_arn = var.github_oidc_provider_arn
+  github_repo_sub_patterns = var.github_repo_sub_patterns
 
   # ✅ Allow your local user (or a role/group you use locally) to assume the role in tests
   additional_trusted_principals = [
