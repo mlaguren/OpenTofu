@@ -75,7 +75,7 @@ resource "aws_iam_user_policy" "allow_assume_dev_role" {
     Statement = [{
       Effect   = "Allow",
       Action   = "sts:AssumeRole",
-      Resource = "arn:aws:iam::252371519482:role/dev-role" # or module.iam_developer_role.role_arn
+      Resource = module.iam_developer_role.role_arn
     }]
   })
 }
