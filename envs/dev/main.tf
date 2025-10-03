@@ -13,7 +13,6 @@ provider "aws" {
 }
 
 # Example: permissions boundary that caps what the role can ever do
-# tflint-ignore: terraform_unused_declarations
 data "aws_iam_policy_document" "permissions_boundary" {
   statement {
     sid       = "DenyEverythingByDefault"
@@ -30,6 +29,7 @@ resource "aws_iam_policy" "dev_boundary" {
 }
 
 # Minimal inline policy example (read-only to STS and IAM Get* needed by some SDKs)
+# tflint-ignore: terraform_unused_declarations
 data "aws_iam_policy_document" "baseline_readonly" {
   statement {
     effect    = "Allow"
