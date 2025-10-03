@@ -1,0 +1,95 @@
+name: Terratest (IAM Developer Role)
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  terratest-iam:
+    # Prevent running on forked PRs (no repo secrets there)
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_CI_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: gha-iam-terratest
+          role-duration-seconds: 3600
+
+      # Sanity check: fail fast if creds are not present
+      - name: Who am I? (STS)
+        run: aws sts get-caller-identity
+
+      - name: Setup OpenTofu
+        uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: v1.7.3
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22.x'
+          check-latest: true
+
+      - name: Cache Go build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Install gotestsum
+        run: go install gotest.tools/gotestsum@latest
+
+      - name: Resolve AWS Account ID (for test env)
+        id: sts_id
+        run: |
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          echo "AWS_ACCOUNT_ID=$ACCOUNT_ID" >> "$GITHUB_ENV"
+          echo "account=$ACCOUNT_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Run Terratest (IAM Developer Role)
+        working-directory: tests
+        env:
+          # required by your test file
+          AWS_REGION: ${{ env.AWS_REGION }}
+          AWS_ACCOUNT_ID: ${{ steps.sts_id.outputs.account }}
+
+          # ensure Terratest/terraform subprocesses see the OIDC creds
+          AWS_ACCESS_KEY_ID: ${{ env.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          AWS_SESSION_TOKEN: ${{ env.AWS_SESSION_TOKEN }}
+        run: |
+          go mod download
+          gotestsum --junitfile test-report.xml -- \
+            go test -run TestIamDeveloperRole -v -timeout 30m ./... | tee output.txt
+
+      - name: Upload test report (JUnit)
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-terratest
+          path: tests/test-report.xml
+          if-no-files-found: warn
+
+      - name: Upload raw test output
+        uses: actions/upload-artifact@v4
+        with:
+          name: terratest-output
+          path: tests/output.txt
+          if-no-files-found: warn
